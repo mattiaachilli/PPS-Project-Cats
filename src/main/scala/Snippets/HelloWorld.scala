@@ -1,4 +1,4 @@
-package Experiments
+package Snippets
 
 import cats.effect.{IO, IOApp}
 
