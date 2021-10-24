@@ -6,7 +6,7 @@ import cats.implicits.catsSyntaxSemigroup
 object MainCustomSemigroup extends App {
   final case class CustomClass(value: Int)
   object CustomClass {
-    implicit val ProductIntSemigroup: Semigroup[CustomClass] =
+    implicit val productIntSemigroup: Semigroup[CustomClass] =
       (x: CustomClass, y: CustomClass) => CustomClass(x.value * y.value)
   }
 

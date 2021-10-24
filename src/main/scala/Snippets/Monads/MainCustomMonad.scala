@@ -1,5 +1,5 @@
 package Snippets.Monads
-import Snippets.Functor.CustomFunctor
+
 import cats.implicits._
 
 object MainCustomMonad extends App {
