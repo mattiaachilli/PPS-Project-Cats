@@ -6,7 +6,7 @@ object MainCustomMonoids extends App {
   final case class CustomClass(value: Int)
   object CustomClass {
     implicit val customMonoid: Monoid[CustomClass] = new Monoid[CustomClass] {
-      override def empty: CustomClass = CustomClass(0)
+      override val empty: CustomClass = CustomClass(1)
 
       override def combine(x: CustomClass, y: CustomClass): CustomClass = CustomClass(x.value * y.value)
     }

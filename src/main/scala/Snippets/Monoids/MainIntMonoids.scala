@@ -4,7 +4,7 @@ import cats.Monoid
 
 object MainIntMonoids extends App {
   implicit val multiplicationMonoid: Monoid[Int] = new Monoid[Int] {
-    override def empty: Int = 0
+    override val empty: Int = 1
 
     override def combine(x: Int, y: Int): Int = x * y
   }
