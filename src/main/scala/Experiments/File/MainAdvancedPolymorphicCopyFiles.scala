@@ -6,7 +6,7 @@ import cats.effect.{ExitCode, IO, IOApp}
 import java.io.File
 import java.nio.file.{Files, Paths}
 
-object AdvancedPolymorphicCopyFiles extends IOApp {
+object MainAdvancedPolymorphicCopyFiles extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = {
     for {
