@@ -4,6 +4,7 @@ import cats.effect.{IO, Resource}
 import cats.implicits.catsSyntaxTuple2Semigroupal
 
 import java.io._
+import scala.concurrent.duration.DurationInt
 
 /**
  * Utils method for handle file with Cats-Effect.

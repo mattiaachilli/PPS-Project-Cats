@@ -12,6 +12,8 @@ object MainAdvancedPolymorphicCopyFiles extends IOApp {
     for {
       _ <- if (args.length < 2) IO.raiseError(new IllegalArgumentException("Need origin and destination files"))
       else IO.unit
+      _ <- if (!Files.exists(Paths.get(args.head))) IO.raiseError(
+        new IllegalArgumentException("Files must be exists!")) else IO.unit
       _ <- if (args.head == args.tail.head) IO.raiseError(new IllegalArgumentException("Origin file and destination " +
         "files must be different!")) else IO.unit
       _ <- if (Files.exists(Paths.get(args.tail.head))) IO.println("Override destination file (Y/N)?") >>
