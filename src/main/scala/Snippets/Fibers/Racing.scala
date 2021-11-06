@@ -1,6 +1,6 @@
-package Snippets.Concurrent
+package Snippets.Fibers
 
-import cats.effect.{ExitCode, IO, IOApp, OutcomeIO}
+import cats.effect.{IO, IOApp, OutcomeIO}
 
 import scala.concurrent.duration.DurationInt
 
