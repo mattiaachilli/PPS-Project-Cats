@@ -10,8 +10,6 @@ object FiberExample extends IOApp {
   val intValue: IO[Int] = IO(1)
   val stringValue: IO[String] = IO("Scala")
 
-  def createFiber: Fiber[IO, Throwable, String] = ???
-
   implicit class Extension[A](io: IO[A]) {
     def debug: IO[A] = {
       io.map { value =>
@@ -30,7 +28,7 @@ object FiberExample extends IOApp {
 
   def differentThread(): IO[Unit] = {
     for {
-      _ <- fiber.debug
+      _ <- fiber
       _ <- stringValue.debug
     } yield ()
   }
@@ -41,7 +39,7 @@ object FiberExample extends IOApp {
       result <- fib.join
       /*
         1 - success(IO(value))
-        2 - errored(ex)
+        2 - errored(e)
         3 - cancelled
        */
     } yield result
@@ -65,6 +63,7 @@ object FiberExample extends IOApp {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
+//    cancelOnAnotherThread().debug.as(ExitCode.Success)
     cancelOnAnotherThread().debug.as(ExitCode.Success)
   }
 }
