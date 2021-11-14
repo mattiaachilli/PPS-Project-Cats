@@ -23,9 +23,12 @@ lazy val root = (project in file("."))
       "org.scalamacros" %% "resetallattrs" % "1.0.0",
       "org.typelevel" %% "cats-mtl-core" % "0.7.1",
       "org.http4s" %% "http4s-blaze-server" % "1.0.0-M21",
+      "org.http4s" %% "http4s-blaze-client" % "1.0.0-M21",
       "org.http4s" %% "http4s-circe" % "1.0.0-M21",
       "org.http4s" %% "http4s-dsl" % "1.0.0-M21",
       "io.circe" %% "circe-generic" % "0.14.0-M5",
+      "io.circe" %% "circe-literal" % "0.15.0-M1",
+      "io.circe" %% "circe-optics" % "0.14.1"
     ),
     addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
   )
