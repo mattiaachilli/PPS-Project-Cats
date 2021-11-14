@@ -18,8 +18,6 @@ lazy val root = (project in file("."))
       "org.typelevel" %% "munit-cats-effect-3" % "1.0.6" % Test,
       "org.typelevel" %% "cats-effect-cps" % "0.3.0",
       "io.chrisdavenport" %% "monoids" % "0.2.0",
-      "org.typelevel" %% "cats-laws" % "2.6.1",
-      "org.typelevel" %% "discipline-munit" % "1.0.6",
       "org.scalamacros" %% "resetallattrs" % "1.0.0",
       "org.typelevel" %% "cats-mtl-core" % "0.7.1",
       "org.http4s" %% "http4s-blaze-server" % "1.0.0-M21",
