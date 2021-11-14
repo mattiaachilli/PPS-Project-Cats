@@ -1,12 +1,11 @@
 package rest.api
 
-import scala.collection.mutable.ListBuffer
-
 object Entities {
   sealed trait Person {
     def firstName: String
     def lastName: String
   }
+
   case class Actor(firstName: String, lastName: String, movies: Int) extends Person {
     override def toString: String = s"$firstName $lastName"
   }
@@ -14,7 +13,7 @@ object Entities {
     override def toString: String = s"$firstName $lastName"
   }
 
-  case class Movie(title: String, year: Int, actors: ListBuffer[Actor], director: Director, genres: List[String],
+  case class Movie(title: String, year: Int, actors: List[Actor], director: Director, genres: List[String],
                    takings: Long, oscars: Int)
 
   case class MovieWithId(id: String, movie: Movie)

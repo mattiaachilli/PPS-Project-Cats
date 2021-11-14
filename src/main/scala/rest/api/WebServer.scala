@@ -6,7 +6,7 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import Routes.allRoutesComplete
 
 object WebServer extends IOApp {
-  private val moviesRepository: MoviesRepository[IO] = MoviesRepository.createWithSeedData[IO]
+  private val moviesRepository: IO[MoviesRepository[IO]] = MoviesRepository.createWithSeedData[IO]
 
   override def run(args: List[String]): IO[ExitCode] = {
     BlazeServerBuilder[IO](runtime.compute)

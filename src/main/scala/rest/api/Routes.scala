@@ -16,6 +16,7 @@ import org.http4s.implicits.http4sKleisliResponseSyntaxOptionT
 import rest.api.Entities.{Actor, Director, Movie, MovieWithId}
 
 import java.time.Year
+import java.util.UUID
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.global
 
@@ -33,16 +34,11 @@ object Routes {
     - Directors:
       - GET all directors
       - GET the best director
-      - ADD a new director
-      - UPDATE a director
-      - DELETE a director
+      - REPLACE a director in a movie
 
     - Actors:
       - GET all actors
       - GET the best actor
-      - ADD an actor
-      - UPDATE an actor
-      - DELETE an actor
    */
   private object Params {
     implicit val yearQueryParamDecoder: QueryParamDecoder[Year] = QueryParamDecoder[Int].map(year => Year.of(year))
@@ -50,6 +46,8 @@ object Routes {
     case object YearQueryParamMatcher extends ValidatingQueryParamDecoderMatcher[Year]("year")
 
     case object OptionalYearQueryParamMatcher extends OptionalValidatingQueryParamDecoderMatcher[Year]("year")
+
+    case object MovieIdQueryParamMatcher extends QueryParamDecoderMatcher[String]("movieId")
 
     case object DirectorQueryParamMatcher extends QueryParamDecoderMatcher[String]("director")
   }
@@ -64,7 +62,7 @@ object Routes {
 
   import Params._
 
-  private def movieRoutes[F[_] : Async](moviesRepository: MoviesRepository[F]): HttpRoutes[F] = {
+  private def movieRoutes[F[_] : Async](moviesRepository: F[MoviesRepository[F]]): HttpRoutes[F] = {
     val dsl = Http4sDsl[F]
     import dsl._
 
@@ -73,164 +71,119 @@ object Routes {
     HttpRoutes.of[F] {
       // Get movies by director
       case GET -> Root / "movies" :? DirectorQueryParamMatcher(director) +& OptionalYearQueryParamMatcher(maybeYear) =>
-        val moviesByDirector: F[ListBuffer[MovieWithId]] = moviesRepository.findMoviesByDirectorName(director)
-        maybeYear match {
-          case Some(validatedYear) =>
-            validatedYear.fold(
-              _ => BadRequest("Unable to parse argument year"),
-              year => {
-                moviesByDirector.flatMap {
-                  case movies if movies.nonEmpty => Ok(movies.filter(_.movie.year == year.getValue).asJson)
-                  case _ => NotFound(s"No movies with $director found")
-                }
-              }
-            )
-          case None => moviesByDirector.flatMap {
-            case movies if movies.nonEmpty => Ok(movies.asJson)
-            case _ => NotFound(s"No movies with $director found")
-          }
-        }
+        moviesRepository.flatMap(_.findMoviesByDirectorName(director).flatMap {
+          case movies if movies.nonEmpty =>
+            maybeYear match {
+              case Some(validatedYear) =>
+                validatedYear.fold(
+                  _ => BadRequest("Unable to parse argument year"),
+                  year => Ok(movies.filter(_.movie.year == year.getValue).asJson)
+                )
+              case _ => Ok(movies.asJson)
+            }
+          case _ => NotFound(s"No movies with $director found")
+        })
       // Get movies by year
       case GET -> Root / "movies" :? YearQueryParamMatcher(yearValidated) =>
         yearValidated.fold(
           _ => BadRequest("Unable to parse argument year"),
           year => {
-            val moviesByYear = moviesRepository.findMoviesByYear(year.getValue)
-            moviesByYear.flatMap {
+            moviesRepository.flatMap(_.findMoviesByYear(year.getValue).flatMap {
               case movies if movies.nonEmpty => Ok(movies.asJson)
               case _ => NotFound(s"No movies with ${year.getValue} found")
-            }
+            })
           }
         )
       // Get all movies
       case GET -> Root / "movies" =>
-        moviesRepository.getAllMovies.flatMap {
+        moviesRepository.flatMap(_.getAllMovies.flatMap {
           case movies if movies.nonEmpty => Ok(movies.asJson)
           case _ => NoContent()
-        }
+        })
       // Get movie by id
       case GET -> Root / "movies" / UUIDVar(movieId) =>
-        moviesRepository.findMovieById(movieId).flatMap {
+        moviesRepository.flatMap(_.findMovieById(movieId).flatMap {
           case Some(movie) => Ok(movie.asJson)
           case _ => NotFound(s"No movie with $movieId found")
-        }
+        })
       // Add a movie
-      case req@POST -> Root / "movies" =>
+      case req @ POST -> Root / "movies" =>
         req.decodeJson[Movie]
-          .flatMap(moviesRepository.addMovie)
+          .flatMap(movie => moviesRepository.flatMap(_.addMovie(movie)))
           .flatMap(movie => Created(s"Created movie with id: $movie"))
       // Update a movie
-      case req@PUT -> Root / "movies" / UUIDVar(movieId) =>
-        val exist = moviesRepository.findMovieById(movieId)
-        exist.flatMap {
+      case req @ PUT -> Root / "movies" / UUIDVar(movieId) =>
+        moviesRepository.flatMap(_.findMovieById(movieId).flatMap {
           case Some(_) =>
             req.decodeJson[Movie]
-              .flatMap(movie => moviesRepository.updateMovie(movieId, movie))
+              .flatMap(movie => moviesRepository.flatMap(_.updateMovie(movieId, movie)))
               .flatMap(_ => Ok("Updated successfully"))
           case _ => NotFound(s"No movie with $movieId found")
-        }
+        })
       // Delete a movie
       case DELETE -> Root / "movies" / UUIDVar(movieId) =>
-        val exist = moviesRepository.findMovieById(movieId)
-        exist.flatMap {
-          case Some(_) => moviesRepository.deleteMovie(movieId).flatMap(_ => Ok("Deleted successfully"))
+        moviesRepository.flatMap(_.findMovieById(movieId).flatMap {
+          case Some(_) => moviesRepository.flatMap(_.deleteMovie(movieId).flatMap(_ => Ok("Deleted successfully")))
           case _ => NotFound(s"No movie with $movieId found")
-        }
+        })
       // Get the best movie by rating
       case GET -> Root / "movies" / "ratings" =>
-        moviesRepository.getAllMovies
+        moviesRepository.flatMap(_.getAllMovies
           .flatMap(movies => movies
             .map(_.movie.title)
             .toVector
             .parTraverse
-            (title => moviesRepository.getRatingByMovie(title, client))
-          ).flatMap(_ => Ok("Prova"))
+            (title => moviesRepository.flatMap(_.getRatingByMovie(title, client)))
+          ).flatMap(_ => Ok("Prova")))
     }
   }
 
-  def directorRoutes[F[_] : Async](moviesRepository: MoviesRepository[F]): HttpRoutes[F] = {
+  def directorRoutes[F[_] : Async](moviesRepository: F[MoviesRepository[F]]): HttpRoutes[F] = {
     val dsl = Http4sDsl[F]
     import dsl._
 
     HttpRoutes.of[F] {
       // Get all directors
       case GET -> Root / "directors" =>
-        moviesRepository.getAllDirectors.flatMap {
+        moviesRepository.flatMap(_.getAllDirectors.flatMap {
           case directors if directors.nonEmpty => Ok(directors.asJson)
           case _ => NoContent()
-        }
-      // Add a new director
-      case req@POST -> Root / "directors" =>
-        req.decodeJson[Director]
-          .flatMap(moviesRepository.addDirector)
-          .flatMap {
-            case true => Created("Created!")
-            case false => NotAcceptable("This director already exists!")
-          }
-      // Update a director
-      case req@PUT -> Root / "directors" / director =>
-        val exist = moviesRepository.findDirectorByName(director)
-        exist.flatMap {
-          case true =>
-            req.decodeJson[Director]
-              .flatMap(newDirector => moviesRepository.updateDirector(director, newDirector))
-              .flatMap(_ => Ok("Updated successfully"))
+        })
+      // Replace a director into a movie
+      case req @ PUT -> Root / "directors" :? DirectorQueryParamMatcher(director) +& MovieIdQueryParamMatcher(movieId) =>
+        moviesRepository.flatMap(_.findDirectorByName(director).flatMap {
+          case Some(_) =>
+            moviesRepository.flatMap(_.findMovieById(UUID.fromString(movieId)).flatMap {
+              case Some(_) =>
+                req.decodeJson[Director]
+                  .flatMap(newDirector => moviesRepository.flatMap(_.replaceDirectorFrom(movieId, newDirector)))
+                  .flatMap(_ => Ok("Updated successfully"))
+              case _ => NotFound(s"No movie id found: $movieId")
+            })
           case _ => NotFound(s"No director found for: $director")
-        }
-      // Delete a director
-      case DELETE -> Root / "directors" / director =>
-        val exist = moviesRepository.findDirectorByName(director)
-        exist.flatMap {
-          case true => moviesRepository.deleteDirector(director).flatMap(_ => Ok("Deleted successfully"))
-          case _ => NotFound(s"No director found for: $director")
-        }
+        })
     }
   }
 
-  def actorRoutes[F[_] : Async](moviesRepository: MoviesRepository[F]): HttpRoutes[F] = {
+  def actorRoutes[F[_] : Async](moviesRepository: F[MoviesRepository[F]]): HttpRoutes[F] = {
     val dsl = Http4sDsl[F]
     import dsl._
 
     HttpRoutes.of[F] {
       // Get all actors
       case GET -> Root / "actors" =>
-        moviesRepository.getAllActors.flatMap {
+        moviesRepository.flatMap(_.getAllActors.flatMap {
           case actors if actors.nonEmpty => Ok(actors.asJson)
           case _ => NoContent()
-        }
-      // Add a new actor
-      case req@POST -> Root / "actors" =>
-        req.decodeJson[Actor]
-          .flatMap(moviesRepository.addActor)
-          .flatMap {
-            case true => Created("Created!")
-            case false => NotAcceptable("This actor already exists!")
-          }
-      // Update an actor
-      case req@PUT -> Root / "actors" / actor =>
-        val exist = moviesRepository.findActorByName(actor)
-        exist.flatMap {
-          case true =>
-            req.decodeJson[Actor]
-              .flatMap(newActor => moviesRepository.updateActor(actor, newActor))
-              .flatMap(_ => Ok("Updated successfully"))
-          case _ => NotFound(s"No actor found for: $actor")
-        }
-      // Delete an actor
-      case DELETE -> Root / "actors" / actor =>
-        val exist = moviesRepository.findActorByName(actor)
-        exist.flatMap {
-          case true => moviesRepository.deleteActor(actor).flatMap(_ => Ok("Deleted successfully"))
-          case _ => NotFound(s"No actor found for: $actor")
-        }
+        })
     }
   }
 
-  private def allRoutes[F[_] : Async](moviesRepository: MoviesRepository[F]): HttpRoutes[F] = {
+  private def allRoutes[F[_] : Async](moviesRepository: F[MoviesRepository[F]]): HttpRoutes[F] = {
     /* Combine of semigroups */
     movieRoutes[F](moviesRepository) <+> directorRoutes[F](moviesRepository) <+> actorRoutes[F](moviesRepository)
   }
 
-  def allRoutesComplete[F[_] : Async](moviesRepository: MoviesRepository[F]): HttpApp[F] =
+  def allRoutesComplete[F[_] : Async](moviesRepository: F[MoviesRepository[F]]): HttpApp[F] =
     allRoutes[F](moviesRepository).orNotFound
 }
