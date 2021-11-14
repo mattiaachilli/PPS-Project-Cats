@@ -1,9 +1,9 @@
 package rest.api
 
-import java.util.UUID
+import scala.collection.mutable.ListBuffer
 
 object Entities {
-  abstract class Person() {
+  sealed trait Person {
     def firstName: String
     def lastName: String
   }
@@ -14,6 +14,8 @@ object Entities {
     override def toString: String = s"$firstName $lastName"
   }
 
-  case class Movie(id: String, title: String, year: Int, actors: List[Actor], director: Director, genres: List[String],
+  case class Movie(title: String, year: Int, actors: ListBuffer[Actor], director: Director, genres: List[String],
                    takings: Long, oscars: Int)
+
+  case class MovieWithId(id: String, movie: Movie)
 }
