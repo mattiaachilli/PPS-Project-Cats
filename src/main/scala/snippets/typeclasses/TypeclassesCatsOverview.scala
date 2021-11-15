@@ -1,6 +1,6 @@
-package snippets
+package snippets.typeclasses
 
-class TypeclassesOverview {
+class TypeclassesCatsOverview {
   trait Semigroup[A] {
     def combine(x: A, y: A): A
   }
