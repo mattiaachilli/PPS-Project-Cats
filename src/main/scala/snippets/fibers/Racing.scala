@@ -51,5 +51,5 @@ object Racing extends IOApp.Simple {
   val ioB: IO[Int] = IO.sleep(2.second).as(2).onCancel(IO("second cancelled").debug.void)
 
 
-  def run: IO[Unit] = racePair(ioA, ioB).debug.void
+  def run: IO[Unit] = race.debug.void
 }

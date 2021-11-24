@@ -11,15 +11,15 @@ ref: a ref instance wraps some given data and implements methods to manipulate t
 when some fiber is runnning one of those methods, any other call to any method of the ref instance will be blocked.
  */
 object ProducerConsumer {
-  def producer[F[_] : Sync : Console](queue: Ref[F, Queue[Int]], counter: Int): F[Unit] = {
+  def producer[F[_]: Sync: Console](queue: Ref[F, Queue[Int]], counter: Int): F[Unit] = {
     for {
       _ <- Console[F].println(s"Produced item: $counter")
-      _ <- queue.getAndUpdate(q => q.enqueue(counter + 1)) // Add element to the queue, only one fiber per time can access
+      _ <- queue.update(q => q.enqueue(counter + 1)) // Add element to the queue, only one fiber per time can access
       _ <- producer(queue, counter + 1)
     } yield ()
   }
 
-  def consumer[F[_] : Sync : Console](queue: Ref[F, Queue[Int]]): F[Unit] = {
+  def consumer[F[_]: Sync: Console](queue: Ref[F, Queue[Int]]): F[Unit] = {
     for {
       iO <- queue.modify { q =>
         q.dequeueOption.fold((q, Option.empty[Int])) {
