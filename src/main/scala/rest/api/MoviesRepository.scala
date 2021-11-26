@@ -4,6 +4,7 @@ import cats.effect.kernel.Ref
 import cats.effect.{Async, Sync}
 import cats.implicits._
 import io.circe.Json
+import io.circe.optics.JsonPath.root
 import org.http4s.EntityDecoder
 import org.http4s.circe.jsonOf
 import org.http4s.client.Client
@@ -47,14 +48,26 @@ class MoviesRepository[F[_] : Async](private val stateRef: Ref[F, MoviesReposito
 
   def findMoviesByYear(year: Int): F[List[MovieWithId]] = stateRef.get.map(_.filter(_.movie.year == year))
 
-  // TODO: Fix later
+  def findMoviesByGenre(genre: String): F[List[MovieWithId]] = stateRef.get.map(_.filter(_.movie.genres.contains(genre)))
+
+  def findMoviesByActor(actor: String): F[List[MovieWithId]] = stateRef.get.map(state =>
+    actor.split(" ") match {
+      case Array(name, lastName) =>
+        state.filter(movieWithId => movieWithId.movie.actors.map(actor => (actor.firstName, actor.lastName))
+          .contains((name, lastName)))
+      case _ => Nil
+    })
+
   def getRatingByMovie(title: String, client: Client[F])(implicit jsonDecoder: EntityDecoder[F, Json] = jsonOf[F, Json])
-  : F[Int] = {
-    val informationMovieUrl = IMDB.getRatingUrl(title)
+  : F[Double] = {
+    val informationMovieUrl = IMDB.getInformationMovieUrl(title.replaceAll(" ", "%20"))
     for {
-      json <- client.expect[Json](informationMovieUrl)
-      // root.results.index(0).id.string
-    } yield 1
+      informationMovieJson <- client.expect[Json](informationMovieUrl)
+      movieId = root.results.index(0).id.string.getOption(informationMovieJson).get
+      urlRating = IMDB.getRatingUrl(movieId)
+      ratingMovieJson <- client.expect[Json](urlRating)
+      rating = root.imDb.string.getOption(ratingMovieJson).get.toDouble
+    } yield rating
   }
 
   /* Directors */

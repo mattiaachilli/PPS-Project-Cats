@@ -14,13 +14,14 @@ object WebServer extends IOApp {
       - GET movie from id => Root/movies/id
       - GET all movies from a director and year (optional)
       - GET all movies from a year
+      - GET all movie by genre
+      - GET the best movie by rating
       - ADD a new movie
       - UPDATE a movie
       - DELETE a movie
 
     - Directors:
       - GET all directors
-      - GET the best director
       - REPLACE a director in a movie
 
     - Actors:

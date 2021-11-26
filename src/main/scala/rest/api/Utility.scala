@@ -16,6 +16,10 @@ object Utility {
 
   case object DirectorQueryParamMatcher extends QueryParamDecoderMatcher[String]("director")
 
+  case object GenreQueryParamMatcher extends QueryParamDecoderMatcher[String]("genre")
+
+  case object ActorQueryParamMatcher extends QueryParamDecoderMatcher[String]("actor")
+
   object IMDB {
     private val apiKey = "k_44ltof3p"
 

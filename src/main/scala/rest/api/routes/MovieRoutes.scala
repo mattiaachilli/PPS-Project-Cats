@@ -6,7 +6,7 @@ import rest.api.MoviesRepository
 import org.http4s.{HttpRoutes, Response}
 import org.http4s.client.{Client, JavaNetClientBuilder}
 import org.http4s.dsl.Http4sDsl
-import rest.api.Utility.{DirectorQueryParamMatcher, OptionalYearQueryParamMatcher, YearQueryParamMatcher}
+import rest.api.Utility.{ActorQueryParamMatcher, DirectorQueryParamMatcher, GenreQueryParamMatcher, OptionalYearQueryParamMatcher, YearQueryParamMatcher}
 import cats.implicits._
 import cats.effect.implicits._
 import io.circe.generic.auto._
@@ -23,6 +23,20 @@ object MovieRoutes {
     val client: Client[F] = JavaNetClientBuilder[F].create
 
     HttpRoutes.of[F] {
+      // Get movies by genre
+      case GET -> Root / "movies" :? GenreQueryParamMatcher(genre) =>
+        moviesRepository.findMoviesByGenre(genre).flatMap(movies =>
+          if (movies.isEmpty) NotFound(s"No movie found with genre: $genre")
+          else Ok(movies.asJson)
+        )
+
+      // Get movies by actor
+      case GET -> Root / "movies" :? ActorQueryParamMatcher(actor) =>
+        moviesRepository.findMoviesByActor(actor).flatMap(movies =>
+          if (movies.isEmpty) NotFound(s"No movie found with actor: $actor")
+          else Ok(movies.asJson)
+        )
+
       // Get movies by director
       case GET -> Root / "movies" :? DirectorQueryParamMatcher(director) +& OptionalYearQueryParamMatcher(maybeYear) =>
         moviesRepository.findMoviesByDirectorName(director).flatMap(movies =>
@@ -48,6 +62,16 @@ object MovieRoutes {
           year => findMoviesBy(year.getValue)
         )
 
+      // Get the best movie by rating
+      case GET -> Root / "movies" / "ratings" =>
+        for {
+          movies <- moviesRepository.getAllMovies
+          titles = movies.map(_.movie.title)
+          moviesAndRatings <- titles.parTraverse(title => moviesRepository.getRatingByMovie(title, client).map(r => (title, r)))
+          (bestTitle, score) = moviesAndRatings.maxBy(_._2)
+          response <- Ok(s"${moviesAndRatings.map(t => s"${t._1}: ${t._2}").mkString("; ")}. The best movie is $bestTitle with a score of $score")
+        } yield response
+
       // Get all movies
       case GET -> Root / "movies" =>
         moviesRepository.getAllMovies.flatMap(movies =>
@@ -70,11 +94,12 @@ object MovieRoutes {
         } yield response
 
       // Update a movie
-      case PUT -> Root / "movies" / UUIDVar(movieId) => // FIXME
+      case req@PUT -> Root / "movies" / UUIDVar(movieId) =>
       for {
           maybeMovie <- moviesRepository.findMovieById(movieId)
+          movieToAdd <- req.decodeJson[Movie]
           response <- maybeMovie.fold(NotFound(s"No movie with id $movieId found"))(movie =>
-            moviesRepository.updateMovie(movieId, movie.movie) >> Ok(s"Successfully updated movie with id ${movie.id}")
+            moviesRepository.updateMovie(movieId, movieToAdd) >> Ok(s"Successfully updated movie with id ${movie.id}")
           )
         } yield response
 
@@ -85,17 +110,6 @@ object MovieRoutes {
           response <- maybeMovie.fold(NotFound(s"No movie with id $movieId found"))(movie =>
             moviesRepository.deleteMovie(movieId) >> Ok(s"Successfully deleted movie with id ${movie.id}")
           )
-        } yield response
-
-      // Get the best movie by rating
-      case GET -> Root / "movies" / "ratings" =>
-        for {
-          movies <- moviesRepository.getAllMovies
-          titles = movies.map(_.movie.title)
-          moviesAndRatings <- titles.parTraverse(title => moviesRepository.getRatingByMovie(title, client)
-            .map(r => (title, r)))
-          (bestTitle, score) = moviesAndRatings.maxBy(_._2)
-          response <- Ok(s"The best movie is $bestTitle with a score of $score")
         } yield response
     }
   }
