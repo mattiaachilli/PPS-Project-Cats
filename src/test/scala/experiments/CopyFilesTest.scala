@@ -1,14 +1,13 @@
 package experiments
 
 import experiments.file.FileUtils.{copy, getAmountOfBytesFromFile}
-import munit.CatsEffectAssertions.assertIO
-import munit.FunSuite
+import munit.CatsEffectSuite
 
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
-class CopyFilesTest extends FunSuite {
+class CopyFilesTest extends CatsEffectSuite {
   var sourceFile: Option[File] = None
   var destinationFile: Option[File] = None
 
@@ -22,7 +21,6 @@ class CopyFilesTest extends FunSuite {
     Files.deleteIfExists(sourceFile.get.toPath)
     Files.deleteIfExists(destinationFile.get.toPath)
   }
-
 
   test("Destination file is empty") {
     assertIO(getAmountOfBytesFromFile(destinationFile.get), -1L)
