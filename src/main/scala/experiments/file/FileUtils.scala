@@ -10,6 +10,14 @@ import scala.concurrent.duration.DurationInt
  * Utils method for handle file with Cats-Effect.
  */
 object FileUtils {
+
+  def getAmountOfBytesFromFile(file: File): IO[Long] = {
+    for {
+      inputStream <- IO(new FileInputStream(file))
+      amount <- IO.blocking(inputStream.read(new Array[Byte](1024 * 10)))
+    } yield amount
+  }
+
   private def inputStream(file: File): Resource[IO, FileInputStream] = {
     Resource.make { // Acquire
       IO.blocking(new FileInputStream(file))
