@@ -14,3 +14,5 @@
 * Snippets code: frammenti di codice relativi a fibers, IO, gestione di risorse, concorrenza e principali typeclasses di Cats-Effect. Sono presenti snippets anche su Semigruppi, Monoidi, Funtori e Monadi.
 * Esperimenti: mini-applicativi sulla gestione di risorse, IO e concorrenza.
 * RestAPI: applicazione finale realizzata con Http4s e Cats-Effect con lo scopo di mettere insieme i principali meccanismi di Cats-Effect e di scrivere in un paradigma puramente funzionale.
+
+Nella cartella report è presente la relazione del progetto.
